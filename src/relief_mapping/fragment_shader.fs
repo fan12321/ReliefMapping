@@ -14,6 +14,7 @@ uniform sampler2D normalMap;
 uniform sampler2D depthMap;
 
 uniform float heightScale;
+uniform bool heightFlip;
 
 float depth = 0.0;
 
@@ -30,6 +31,7 @@ vec2 ReliefMapping(vec2 texCoords, vec3 viewDir) {
     for (int i=0; i<max_i; i++) {
         currentDepth += delta;
         actual_dep = texture(depthMap, texCoords + currentDepth * dv).x;
+        actual_dep = heightFlip? (1 - actual_dep) : actual_dep;
         if (actual_dep <= currentDepth) { // currentDepth deeper than actual depth
             break;
         }
@@ -40,6 +42,7 @@ vec2 ReliefMapping(vec2 texCoords, vec3 viewDir) {
     for (int i=0; i<32; i++) {
         delta *= 0.5;
         actual_dep = texture(depthMap, texCoords + currentDepth * dv).z;
+        actual_dep = heightFlip? (1 - actual_dep) : actual_dep;
         if (actual_dep <= currentDepth) { // currentDepth deeper than actual depth
             currentDepth -= delta;
         }
@@ -57,8 +60,10 @@ float shadow (vec2 texCoords, vec3 lightDir) {
     vec2 dv = heightScale * (1.0/lightDir.z) * lightDir.xy;
 
     int check_times = 30;
+    float reference_dep;
     for (int i=1; i<check_times; i++) {
-        if (depth * (1.0 - (i*1.0/check_times)) > texture(depthMap, texCoords + depth * (i*1.0/check_times) * dv).z) {
+        reference_dep = texture(depthMap, texCoords + depth * (i*1.0/check_times) * dv).z;
+        if (depth * (1.0 - (i*1.0/check_times)) > (heightFlip? (1 - reference_dep): reference_dep)) {
             return 0.4;
         }
     }

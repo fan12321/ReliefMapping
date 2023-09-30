@@ -8,7 +8,7 @@
 
 
 #include <learnopengl/filesystem.h>
-#include <learnopengl/shader_m.h>
+#include <learnopengl/shader.h>
 #include <learnopengl/camera.h>
 
 #include <iostream>
@@ -16,14 +16,16 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 void renderQuad();
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1200;
+const unsigned int SCR_HEIGHT = 800;
 float heightScale = 0.1;
+bool heightFlip = true; // height map 0 to 1, or 1 to 0
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -61,6 +63,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetKeyCallback(window, key_callback);
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -83,9 +86,9 @@ int main()
 
     // load textures
     // -------------
-    unsigned int diffuseMap = loadTexture("./data/relief_colour_3.png");
-    unsigned int normalMap  = loadTexture("./data/relief_normal_3.png");
-    unsigned int heightMap  = loadTexture("./data/relief_height_3.png");
+    unsigned int diffuseMap = loadTexture("./data/relief_colour_1.jpg");
+    unsigned int normalMap  = loadTexture("./data/relief_normal_1.jpg");
+    unsigned int heightMap  = loadTexture("./data/relief_height_1.png");
 
     // shader configuration
     // --------------------
@@ -98,6 +101,10 @@ int main()
     // -------------
     glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
 
+    std::cout << "Press Q or E to adjust height" << std::endl;
+    std::cout << "Press F to switch height map's behaviour (1 being the highest point or 0 being the highest point)" << std::endl;
+
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -106,8 +113,10 @@ int main()
         // --------------------
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
-        std::cout << 1.0 / deltaTime << std::endl;
         lastFrame = currentFrame;
+
+        lightPos.x = 0.5f * glm::sin(currentFrame);
+        lightPos.z = 0.3f * glm::cos(currentFrame);
 
         // input
         // -----
@@ -115,7 +124,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.1f, 0.5f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // configure view/projection matrices
@@ -131,7 +140,7 @@ int main()
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
         shader.setFloat("heightScale", heightScale); // adjust with Q and E keys
-        std::cout << heightScale << std::endl;
+        shader.setBool("heightFlip", heightFlip);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         glActiveTexture(GL_TEXTURE1);
@@ -166,17 +175,17 @@ void renderQuad()
     if (quadVAO == 0)
     {
         // positions
-        glm::vec3 pos1(-1.0f,  1.0f, 0.0f);
-        glm::vec3 pos2(-1.0f, -1.0f, 0.0f);
-        glm::vec3 pos3( 1.0f, -1.0f, 0.0f);
-        glm::vec3 pos4( 1.0f,  1.0f, 0.0f);
+        glm::vec3 pos1(-10.0f, -3.0f, -20.0f);
+        glm::vec3 pos2(-10.0f, -3.0f, 0.0f);
+        glm::vec3 pos3( 10.0f, -3.0f, 0.0f);
+        glm::vec3 pos4( 10.0f, -3.0f, -20.0f);
         // texture coordinates
         glm::vec2 uv1(0.0f, 1.0f);
         glm::vec2 uv2(0.0f, 0.0f);
         glm::vec2 uv3(1.0f, 0.0f);
         glm::vec2 uv4(1.0f, 1.0f);
         // normal vector
-        glm::vec3 nm(0.0f, 0.0f, 1.0f);
+        glm::vec3 nm(0.0f, 1.0f, 0.0f);
 
         // calculate tangent/bitangent vectors of both triangles
         glm::vec3 tangent1, bitangent1;
@@ -272,14 +281,14 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
     {
         if (heightScale > 0.0f)
-            heightScale -= 0.005f;
+            heightScale -= 0.001f;
         else
             heightScale = 0.0f;
     }
     else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
     {
         if (heightScale < 1.0f)
-            heightScale += 0.005f;
+            heightScale += 0.001f;
         else
             heightScale = 1.0f;
     }
@@ -319,6 +328,15 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(yoffset);
+}
+
+// key input for toggle settings 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_F && action == GLFW_PRESS)
+    {
+        heightFlip = !heightFlip;
+    }
 }
 
 // utility function for loading a 2D texture from file
