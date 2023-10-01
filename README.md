@@ -2,7 +2,8 @@
 
 Ray tracing in Fragment Shader using OpenGL
 
-https://github.com/fan12321/relief_mapping/assets/83314448/16f38333-3699-4dcd-adc8-8ae72b6ed0f9
+https://github.com/fan12321/ReliefMapping/assets/83314448/8ebc6b3b-5512-4f89-83ad-a1dea338ac1f
+
 
 1. Make a "build" directory to build the project
    ```
